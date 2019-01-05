@@ -38,7 +38,7 @@ def getLink(search=None , category=None, color=None):
 
     #First element is the link, second is the score
     top_rated = ["filler url link", 0]
-
+    og_name = ""
     for x in range(len(product_grid)):
         products = product_grid[x].find_all('li', class_="product")
         # print "There are {} products\n{}\n".format(len(products),url)
@@ -50,109 +50,146 @@ def getLink(search=None , category=None, color=None):
             for z in range(len(product_names)):
                 # url = product_names[z].find_all('a', href=True)
                 product_name = product_names[z].find_all('a', href=True)
-                name = (product_name[z].text).lower()
+                name = product_name[z].text
                 temp_url = product_name[z]['href']
                 temp_counter = 0
-                for part in search.split(" "):
-                    if part in name.split(" "): temp_counter += 1
-                    
-                    if temp_counter > top_rated[1]:
-                        top_rated[0] = (product_name[z]['href']).encode("utf-8")
-                        top_rated[1] = temp_counter
-                    elif temp_counter == top_rated[1] and (temp_counter is not 0):
-                        top_rated.append([temp_url,temp_counter])
+                for part in search.lower().split(" "):
+                    if part in name.lower().split(" "): temp_counter += 1
+                # print "{}: {}".format(name,temp_counter)
+                if temp_counter > top_rated[1]:
+                    og_name = name
+                    top_rated[0] = (product_name[z]['href']).encode("utf-8")
+                    top_rated[1] = temp_counter
+                elif temp_counter == top_rated[1] and (temp_counter is not 0):
+                    # print "{}: {}".format(name,temp_counter)
+                    top_rated.append([temp_url,temp_counter])
 
                         
-
     print "url: {}".format(top_rated[0])
-    return top_rated[0]
+    return top_rated[0],og_name
 
 def size_color_selection(driver,product_page,sizes=None,color=None):
+    cop_style = []
     driver.get(product_page)
+    time.sleep(1)
     page = (driver.execute_script("return document.getElementsByTagName('html')[0].innerHTML")).encode("utf-8")
     soup = BeautifulSoup(page,'html.parser')
-    
-    product_view = soup.find('div',class_='productView-options')
-    forms = product_view.find_all('div', class_="form-field")
+
+
+    num_options = soup.find('form',action="https://www.golfwang.com/cart.php")
+    first_div = num_options.find('div')
+    forms = first_div.find_all('div', class_="form-field")
+
+
     # print "This is the length of forms: {}".format(len(forms))
-    for x in range(len(forms)):
-        
-        label = forms[x].find_all('label', class_="form-label form-label--alternate form-label--inlineSmall")
-        # print "This is the length of label tag: {}".format(len(label))
-        category = ""
-        for u in range(len(label)):
-            # THRES A BUNCH OF WHITE SPACE SO I NEED TO GET RID OF IT
+    if len(forms) == 0:
+        driver.find_element_by_id("form-action-addToCart").click()
+        time.sleep(2)
+        # driver.get('https://www.golfwang.com/cart.php')
+        checkout(driver)
 
-            category = label[u].text
-            category = " ".join(category.split()) # Pulls the string Size: or Color:
-            category = (category.split(" "))[0]
-            category = (category.split(":"))[0]
-            print category # Size:
+        return "NONE"
+    else:
+        for x in range(len(forms)):
+            # print 'This form number: {}'.format(x+1)
+            label = forms[x].find_all('label', class_="form-label form-label--alternate form-label--inlineSmall")
+            # print "This is the length of label tag: {}".format(len(label))
+            category = ""
+            for u in range(len(label)):
+                # print 'There are {} different options'.format(len(label))
+                # THRES A BUNCH OF WHITE SPACE SO I NEED TO GET RID OF IT
 
-        selection_tag = forms[x].find_all('select','form-select form-select--small')
-        # print "This is the length of drop downs: {}".format(len(selection_tag))
+                category = label[u].text
+                category = " ".join(category.split()) # Pulls the string Size: or Color:
+                category = (category.split(" "))[0]
+                category = (category.split(":"))[0]
+                # print category # Size
 
-        for y in range(len(selection_tag)):
-            options = selection_tag[y].find_all('option', disabled=None)
-            # print 'hello'
-            print "This is the length of SIZE OPTIONS: {}".format(len(options))
-            if len(options) == 1: print 'They are sold out'
-            else:
-                print ""
-                available_sizes = []
-                for z in range(len(options)):
-                    if (options[z].text).lower() != category.lower():
-                        available_sizes.append((options[z].text).lower())
-                print "These are avaiable the {}\'s: ".format(category)
-                if sizes is None: sizes = color
-                for option in sizes:
-                    if option.lower() in available_sizes:
-                        print 'We can purchase this in size: {}'.format(option)
-                        select = Select(driver.find_element_by_xpath("//*[@class='form-select form-select--small']"))
-                        select.select_by_visible_text(option)
-                        driver.find_element_by_id("form-action-addToCart").click()
-                        time.sleep(1)
-                        driver.get('https://www.golfwang.com/cart.php')
-                        print 'We got this far'
-                        # time.sleep(2)
-                        # driver.get_screenshot_as_file('C:\Users\haust\Desktop\golf\purchases\cart2.png')
-                        break
-                        # time.sleep(10)
+            selection_tag = forms[x].find_all('select','form-select form-select--small')
+            # print "This is the length of drop downs: {}".format(len(selection_tag))
+
+
+            for y in range(len(selection_tag)):
+                options = selection_tag[y].find_all('option', disabled=None)
+                # print options
+                # print 'hello'
+                # print "There are {} OPTIONS: {}".format(category,len(options)-1)
+                if len(options) == 1: return 
+                else:
+                    print ""
+                    available_options = []
+                    for z in range(len(options)):
+                        if ((options[z].text).lower() != 'size') or ((options[z].text).lower() != 'color'):
+                            available_options.append((options[z].text).lower())
+
+                    # print "These are avaiable the {}\'s: ".format(category)
+
+                    user_buy_preference = []
+                    # if sizes is None: sizes = color
+                    if category == 'Size': user_buy_preference = sizes
+                    elif category == 'Color': user_buy_preference = color
+
+                    for option in user_buy_preference:
+                        if option.lower() in available_options:
+                            select = Select(driver.find_elements_by_xpath("//*[@class='form-select form-select--small']")[x])
+                            select.select_by_visible_text(option)
+                            cop_style.append(option)
+                            if x == len(forms)-1:
+                                # print 'Waiting to click checkout'
+                                driver.find_element_by_id("form-action-addToCart").click()
+                                time.sleep(2)
+                                checkout(driver)
+                                return cop_style
+                                
+
+                                
+                            else:
+                                break
+                                # continue
                     
-            break
+                break
+            
 
-
-        
-    return "hello"
-
-    # driver.get(product_page)
-    # select = Select(driver.find_element_by_class_name('form-select form-select--small'))
-    # official_size = ""
-    # for size in sizes:
-    #     try:
-    #         select.select_by_visible_text(size)
-    #     except:
-    #         print "This size is out of stock: \'{}\'".format(size)
-
-    # if color is not None:
-    #     return "Added a {} {} to cart".format(official_size, color)
-    # return "Added a {} to cart".format(official_size)
-    
+def checkout(driver) :
+    driver.get('https://www.golfwang.com/checkout.php')
+    time.sleep(4)
+    driver.find_element_by_id('checkout-shipping-continue').click()
+    time.sleep(1)
+    driver.find_element_by_id('ccNumber').send_keys(config.cred_num)
+    driver.find_element_by_id('ccExpiry').send_keys(config.cred_exp)
+    driver.find_element_by_id('ccName').send_keys(config.cred_name)
+    driver.find_element_by_id('ccCvv').send_keys(config.cred_cvv)
 
 def main(search=None,category=None, size=None, color=None):
 
     options = Options()
     options.headless = False
-    driver = webdriver.Chrome('F:\Program Files (x86)\Google\Chrome\Application\chromedriver',chrome_options=options)
-    
-    # cart_url = home_url +'cart.php
+
+    driver = webdriver.Chrome('/Users/ty/Documents/chromedriver',chrome_options=options)
+    driver.get('https://golfwang.com/login.php')
+    driver.find_element_by_id('login_email').send_keys(config.user)
+    driver.find_element_by_id('login_pass').send_keys(config.password)
+    driver.find_element_by_css_selector("input[value='Sign in']").click()
+    time.sleep(1)
+
+
+    print "\nGOLF COP 30000 STARTIN IN 4 SECONDS"
+    time.sleep(4)
+    print "starting"
     start = time.time()
-    product_page = getLink(search,category)
+    product_page, product = getLink(search,category)
     selecting_options = size_color_selection(driver,product_page,size, color)
 
     end = time.time()
+    screen_shot_time = 2
     print "\nIt took {:0.3f} seconds".format(end-start)
-    print ""
+    if selecting_options is not None:
+        print "COPPED: {}\nATTRIBUTES: {}\n".format(product,selecting_options)
+        time.sleep(2)
+        driver.get_screenshot_as_file('/Users/ty/Desktop/fsociety/py_programs/golf/purchases/cart2.png')
+        time.sleep(10)
+    else:
+        print "They are sold out"
 
-main(search="duffle bag",category="accessories",color=["Black","Lavender"])
+main(search="GOLD MEDALLION BELL BUCKET HAT",category="hats",size=None ,color=None)
 
