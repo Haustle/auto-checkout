@@ -90,77 +90,106 @@ def size_color_selection(driver,product_page,sizes=None,color=None):
 
         return "NONE"
     else:
-        for x in range(len(forms)):
-            # print 'This form number: {}'.format(x+1)
-            label = forms[x].find_all('label', class_="form-label form-label--alternate form-label--inlineSmall")
-            # print "This is the length of label tag: {}".format(len(label))
-            category = ""
-            for u in range(len(label)):
-                # print 'There are {} different options'.format(len(label))
-                # THRES A BUNCH OF WHITE SPACE SO I NEED TO GET RID OF IT
+        while len(forms) != 0:
+            # time.sleep(3)
+            for x in range(len(forms)):
+                # time.sleep(3)
+                # print 'This form number: {}'.format(x+1)
+                label = forms[x].find_all('label', class_="form-label form-label--alternate form-label--inlineSmall")
+                # print "This is the length of label tag: {}".format(len(label))
+                category = ""
+                for u in range(len(label)):
+                    # print 'There are {} different options'.format(len(label))
+                    # THRES A BUNCH OF WHITE SPACE SO I NEED TO GET RID OF IT
 
-                category = label[u].text
-                category = " ".join(category.split()) # Pulls the string Size: or Color:
-                category = (category.split(" "))[0]
-                category = (category.split(":"))[0]
-                # print category # Size
+                    category = label[u].text
+                    category = " ".join(category.split()) # Pulls the string Size: or Color:
+                    category = (category.split(" "))[0]
+                    category = (category.split(":"))[0]
+                if (len(forms) == 2) and (x == 0) and (category != 'Color'): 
+                    continue
 
-            selection_tag = forms[x].find_all('select','form-select form-select--small')
-            # print "This is the length of drop downs: {}".format(len(selection_tag))
+                selection_tag = forms[x].find_all('select','form-select form-select--small')
+                # print "This is the length of drop downs: {}".format(len(selection_tag))
 
 
-            for y in range(len(selection_tag)):
-                options = selection_tag[y].find_all('option', disabled=None)
-                # print options
-                # print 'hello'
-                # print "There are {} OPTIONS: {}".format(category,len(options)-1)
-                if len(options) == 1: return 
-                else:
-                    print ""
-                    available_options = []
-                    for z in range(len(options)):
-                        if ((options[z].text).lower() != 'size') or ((options[z].text).lower() != 'color'):
-                            available_options.append((options[z].text).lower())
+                for y in range(len(selection_tag)):
+                    options = selection_tag[y].find_all('option', disabled=None)
 
-                    # print "These are avaiable the {}\'s: ".format(category)
+                    if len(options) == 1: return 
+                    else:
+                        print ""
+                        available_options = []
+                        for z in range(len(options)):
+                            if ((options[z].text).lower() != 'size') or ((options[z].text).lower() != 'color'):
+                                available_options.append((options[z].text).encode("utf-8"))
+                        
+                        
+                        # print len(forms)
+                        user_buy_preference = []
+                        if category == 'Size': user_buy_preference = sizes
+                        elif category == 'Color': user_buy_preference = color
 
-                    user_buy_preference = []
-                    # if sizes is None: sizes = color
-                    if category == 'Size': user_buy_preference = sizes
-                    elif category == 'Color': user_buy_preference = color
-
-                    for option in user_buy_preference:
-                        if option.lower() in available_options:
-                            select = Select(driver.find_elements_by_xpath("//*[@class='form-select form-select--small']")[x])
-                            select.select_by_visible_text(option)
-                            cop_style.append(option)
-                            if x == len(forms)-1:
-                                # print 'Waiting to click checkout'
-                                driver.find_element_by_id("form-action-addToCart").click()
-                                time.sleep(2)
-                                checkout(driver)
-                                return cop_style
+                        
+                        # print "These are the user preferences: {}".format(user_buy_preference)
+                        for z in range(len(user_buy_preference)):
+                            # print "This is the length of user buy preference: {}".format(len(user_buy_preference))
+                            option = user_buy_preference[z].title() if category == "Color" else user_buy_preference[z].upper()
+                            # print "These are avaiable the {}\'s: {}".format(category,available_options)
+                            # print "This is the first test_case : {}".format(option)
+                            
+                            if option in available_options:
+                                select = driver.find_elements_by_xpath("//*[@class='form-select form-select--small']")
+                                # print "This is the len of select: {}".format(len(select))
+                                select = Select(driver.find_elements_by_xpath("//*[@class='form-select form-select--small']")[x])
                                 
-
+                                try:
+                                    # print "Trying to select option: {}".format(option)
+                                    select.select_by_visible_text(option)
+                                    cop_style.append(option)
+                                    # print "hello"
+                                    if len(forms) == 1:
+                                        # print 'Waiting to click checkout'
+                                        driver.find_element_by_id("form-action-addToCart").click()
+                                        # time.sleep(2)
+                                        driver.get('https://www.golfwang.com/cart.php')
+                                        checkout(driver)
+                                        return cop_style
+                                    else:
+                                        forms.pop(x)
+                                        print len(forms)
+                                        break
+                                except:
+                                    if user_buy_preference[x] == user_buy_preference[-1]:
+                                        return None
+                                    else:
+                                        print '\nSomething went wrong when selecting a size'
                                 
-                            else:
-                                break
-                                # continue
-                    
-                break
+                                    
+                            
+                                    
+
+                                   
+                        
+                    break
             
 
 def checkout(driver) :
     driver.get('https://www.golfwang.com/checkout.php')
-    time.sleep(4)
-    driver.find_element_by_id('checkout-shipping-continue').click()
+    while True:
+        try:
+            driver.find_element_by_id('checkout-shipping-continue').click()
+            break
+        except:
+            time.sleep(1)
+
     time.sleep(1)
     driver.find_element_by_id('ccNumber').send_keys(config.cred_num)
     driver.find_element_by_id('ccExpiry').send_keys(config.cred_exp)
     driver.find_element_by_id('ccName').send_keys(config.cred_name)
     driver.find_element_by_id('ccCvv').send_keys(config.cred_cvv)
 
-def main(search=None,category=None, size=None, color=None):
+def main(search=None,category=None, size=None, color=None, quantity=None):
 
     options = Options()
     options.headless = False
@@ -170,6 +199,7 @@ def main(search=None,category=None, size=None, color=None):
     driver.find_element_by_id('login_email').send_keys(config.user)
     driver.find_element_by_id('login_pass').send_keys(config.password)
     driver.find_element_by_css_selector("input[value='Sign in']").click()
+    print '{}: SIGNED IN'.format(config.user)
     time.sleep(1)
 
 
@@ -181,7 +211,6 @@ def main(search=None,category=None, size=None, color=None):
     selecting_options = size_color_selection(driver,product_page,size, color)
 
     end = time.time()
-    screen_shot_time = 2
     print "\nIt took {:0.3f} seconds".format(end-start)
     if selecting_options is not None:
         print "COPPED: {}\nATTRIBUTES: {}\n".format(product,selecting_options)
@@ -191,5 +220,5 @@ def main(search=None,category=None, size=None, color=None):
     else:
         print "They are sold out"
 
-main(search="GOLD MEDALLION BELL BUCKET HAT",category="hats",size=None ,color=None)
+main(search="save the bees",category="tops",size=["XS","XL","L"] ,color=["Safety Orange","Black"])
 
