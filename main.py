@@ -1,4 +1,5 @@
 import config, requests
+from order_form_sort import getOrders
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import Select
@@ -65,7 +66,6 @@ def getLink(search=None , category=None, color=None):
                     top_rated.append([temp_url,temp_counter])
 
                         
-    print "url: {}".format(top_rated[0])
     return top_rated[0],og_name
 
 def size_color_selection(driver,product_page,sizes=None,color=None):
@@ -83,15 +83,16 @@ def size_color_selection(driver,product_page,sizes=None,color=None):
 
     # print "This is the length of forms: {}".format(len(forms))
     if len(forms) == 0:
+        time.sleep(1)
         driver.find_element_by_id("form-action-addToCart").click()
         time.sleep(2)
-        # driver.get('https://www.golfwang.com/cart.php')
-        checkout(driver)
 
         return "NONE"
     else:
+        # print "WE ARE IN THE LOOP FOR SLECTING"
         while len(forms) != 0:
             # time.sleep(3)
+            # print 'forms is not 0'
             for x in range(len(forms)):
                 # time.sleep(3)
                 # print 'This form number: {}'.format(x+1)
@@ -106,26 +107,27 @@ def size_color_selection(driver,product_page,sizes=None,color=None):
                     category = " ".join(category.split()) # Pulls the string Size: or Color:
                     category = (category.split(" "))[0]
                     category = (category.split(":"))[0]
+                    # print category
                 if (len(forms) == 2) and (x == 0) and (category != 'Color'): 
                     continue
 
                 selection_tag = forms[x].find_all('select','form-select form-select--small')
                 # print "This is the length of drop downs: {}".format(len(selection_tag))
-
+                # time.sleep(5)
 
                 for y in range(len(selection_tag)):
                     options = selection_tag[y].find_all('option', disabled=None)
-
+                    # print len(options)
                     if len(options) == 1: return 
                     else:
-                        print ""
+                        # print ""
                         available_options = []
                         for z in range(len(options)):
                             if ((options[z].text).lower() != 'size') or ((options[z].text).lower() != 'color'):
                                 available_options.append((options[z].text).encode("utf-8"))
                         
                         
-                        # print len(forms)
+                        # print "This is the list of available options: {}".format(available_options)
                         user_buy_preference = []
                         if category == 'Size': user_buy_preference = sizes
                         elif category == 'Color': user_buy_preference = color
@@ -147,17 +149,14 @@ def size_color_selection(driver,product_page,sizes=None,color=None):
                                     # print "Trying to select option: {}".format(option)
                                     select.select_by_visible_text(option)
                                     cop_style.append(option)
-                                    # print "hello"
                                     if len(forms) == 1:
-                                        # print 'Waiting to click checkout'
                                         driver.find_element_by_id("form-action-addToCart").click()
-                                        # time.sleep(2)
-                                        driver.get('https://www.golfwang.com/cart.php')
-                                        checkout(driver)
+                                        time.sleep(1)
+                                        # driver.get('https://www.golfwang.com/cart.php')
+                                        # if checkout is True: checkout(driver)
                                         return cop_style
                                     else:
                                         forms.pop(x)
-                                        print len(forms)
                                         break
                                 except:
                                     if user_buy_preference[x] == user_buy_preference[-1]:
@@ -183,7 +182,7 @@ def checkout(driver) :
         except:
             time.sleep(1)
 
-    time.sleep(1)
+    time.sleep(2)
     driver.find_element_by_id('ccNumber').send_keys(config.cred_num)
     driver.find_element_by_id('ccExpiry').send_keys(config.cred_exp)
     driver.find_element_by_id('ccName').send_keys(config.cred_name)
@@ -192,33 +191,56 @@ def checkout(driver) :
 def main(search=None,category=None, size=None, color=None, quantity=None):
 
     options = Options()
-    options.headless = False
+    options.headless = True
 
-    driver = webdriver.Chrome('/Users/ty/Documents/chromedriver',chrome_options=options)
-    driver.get('https://golfwang.com/login.php')
-    driver.find_element_by_id('login_email').send_keys(config.user)
-    driver.find_element_by_id('login_pass').send_keys(config.password)
-    driver.find_element_by_css_selector("input[value='Sign in']").click()
-    print '{}: SIGNED IN'.format(config.user)
-    time.sleep(1)
+    #RETRIEVING ITEMS FROM EXCEL SHEET
+    excel_sheet_location = '/Users/ty/Desktop/fsociety/py_programs/golf/ORDER_FORM.xlsx'
+    orderList = getOrders(excel_sheet_location)
+
+    if len(orderList) > 0:
+    # SIGNING INTO THE WEBSITE
+        driver = webdriver.Chrome('/Users/ty/Documents/chromedriver',chrome_options=options)
+        driver.get('https://golfwang.com/login.php')
+        driver.find_element_by_id('login_email').send_keys(config.user)
+        driver.find_element_by_id('login_pass').send_keys(config.password)
+        driver.find_element_by_css_selector("input[value='Sign in']").click()
+        print '{}: SIGNED IN'.format(config.user)
+        time.sleep(1)
 
 
-    print "\nGOLF COP 30000 STARTIN IN 4 SECONDS"
-    time.sleep(4)
-    print "starting"
-    start = time.time()
-    product_page, product = getLink(search,category)
-    selecting_options = size_color_selection(driver,product_page,size, color)
+        # print "\nGOLF COP 30000 STARTIN IN 4 SECONDS"
+        time.sleep(4)
+        print "STARTING"
+        
+        start = time.time()
+        for x in range(len(orderList)):
+            local_start = time.time()
+            quantity = orderList[x][0]
+            category = orderList[x][1].lower()
+            search = orderList[x][2].lower()
+            color = (orderList[x][3]).split(",") if orderList[x][3] != 'None' else None
+            size = (orderList[x][4]).split(",") if orderList[x][4] != 'None' else None
 
-    end = time.time()
-    print "\nIt took {:0.3f} seconds".format(end-start)
-    if selecting_options is not None:
-        print "COPPED: {}\nATTRIBUTES: {}\n".format(product,selecting_options)
-        time.sleep(2)
-        driver.get_screenshot_as_file('/Users/ty/Desktop/fsociety/py_programs/golf/purchases/cart2.png')
-        time.sleep(10)
-    else:
-        print "They are sold out"
 
-main(search="save the bees",category="tops",size=["XS","XL","L"] ,color=["Safety Orange","Black"])
+            product_page, product = getLink(search,category)
+            selecting_options = size_color_selection(driver,product_page,size, color) if (x == len(orderList)-1) else size_color_selection(driver,product_page,size, color)
+            local_end = time.time()
+
+            print "\nIt took {:0.3f} seconds to add to cart".format(local_end-local_start)
+            if selecting_options is not None:
+                print "ADDED TO CART: {}\nATTRIBUTES: {}\n".format(product,selecting_options)
+                if x == len(orderList)-1:
+                    checkout(driver)
+
+                    end = time.time()
+                    print "CHECKED OUT IN: {} seconds".format(end-start)
+                    # time.sleep(2)
+                    driver.get_screenshot_as_file('/Users/ty/Desktop/fsociety/py_programs/golf/purchases/cart{}.png'.format(x))
+                    time.sleep(10)
+                else: continue
+            else:
+                print "They are sold out"
+        
+
+main()
 
