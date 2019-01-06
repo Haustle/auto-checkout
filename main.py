@@ -213,8 +213,9 @@ def main(search=None,category=None, size=None, color=None, quantity=None):
         print "STARTING"
         
         start = time.time()
+        items_copped = []
         for x in range(len(orderList)):
-            local_start = time.time()
+            # local_start = time.time()
             quantity = orderList[x][0]
             category = orderList[x][1].lower()
             search = orderList[x][2].lower()
@@ -224,16 +225,18 @@ def main(search=None,category=None, size=None, color=None, quantity=None):
 
             product_page, product = getLink(search,category)
             selecting_options = size_color_selection(driver,product_page,size, color) if (x == len(orderList)-1) else size_color_selection(driver,product_page,size, color)
-            local_end = time.time()
+            # local_end = time.time()
 
-            print "\nIt took {:0.3f} seconds to add to cart".format(local_end-local_start)
+            # print "\nIt took {:0.3f} seconds to add to cart".format(local_end-local_start)
             if selecting_options is not None:
-                print "ADDED TO CART: {}\nATTRIBUTES: {}\n".format(product,selecting_options)
+                items_copped.append("ADDED TO CART: {}\nATTRIBUTES: {}\n".format(product,selecting_options))
                 if x == len(orderList)-1:
                     checkout(driver)
-
                     end = time.time()
                     print "CHECKED OUT IN: {} seconds".format(end-start)
+
+                    for item in items_copped:
+                        print "\n{}".format(item)
                     # time.sleep(2)
                     driver.get_screenshot_as_file('/Users/ty/Desktop/fsociety/py_programs/golf/purchases/cart{}.png'.format(x))
                     time.sleep(10)
