@@ -1,10 +1,9 @@
-import config, requests
+import config, requests, time, os
 from order_form_sort import getOrders
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import Select
 from bs4 import BeautifulSoup
-import time
 
 
 
@@ -183,7 +182,13 @@ def checkout(driver) :
             time.sleep(1)
 
     time.sleep(2)
-    driver.find_element_by_id('ccNumber').send_keys(config.cred_num) # WAITING FOR THIS ELEMENT IS CAUSING THE MOS
+    while True:
+        try:
+            driver.find_element_by_id('ccNumber').send_keys(config.cred_num) # WAITING FOR THIS ELEMENT IS CAUSING THE MOS
+            break
+        except selenium.common.exceptions.NoSuchElementException:
+            time.sleep(1)
+    
     driver.find_element_by_id('ccExpiry').send_keys(config.cred_exp)
     driver.find_element_by_id('ccName').send_keys(config.cred_name)
     driver.find_element_by_id('ccCvv').send_keys(config.cred_cvv)
@@ -194,12 +199,14 @@ def main(search=None,category=None, size=None, color=None, quantity=None):
     options.headless = True
 
     #RETRIEVING ITEMS FROM EXCEL SHEET
-    excel_sheet_location = '/Users/ty/Desktop/fsociety/py_programs/golf/ORDER_FORM.xlsx'
+    # print "This is the current cwd: {}".format(__file__)
+    excel_sheet_location = '{}/ORDER_FORM.xlsx'.format(os.getcwd())
+    # print "This is excel sheet location: {}".format(excel_sheet_location)
     orderList = getOrders(excel_sheet_location)
 
     if len(orderList) > 0:
     # SIGNING INTO THE WEBSITE
-        driver = webdriver.Chrome('/Users/ty/Documents/chromedriver',chrome_options=options)
+        driver = webdriver.Chrome(config.driver_loc,chrome_options=options)
         driver.get('https://golfwang.com/login.php')
         driver.find_element_by_id('login_email').send_keys(config.user)
         driver.find_element_by_id('login_pass').send_keys(config.password)
@@ -235,7 +242,7 @@ def main(search=None,category=None, size=None, color=None, quantity=None):
                     for item in items_copped:
                         print "\n{}".format(item)
                     # time.sleep(2)
-                    driver.get_screenshot_as_file('/Users/ty/Desktop/fsociety/py_programs/golf/purchases/cart{}.png'.format(x))
+                    driver.get_screenshot_as_file('{}/purchases/cart{}.png'.format(os.getcwd(),x))
                     time.sleep(10)
                 else: continue
             else:
