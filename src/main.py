@@ -152,8 +152,7 @@ def size_color_selection(driver,product_page,sizes=None,color=None):
                                     if len(forms) == 1:
                                         driver.find_element_by_id("form-action-addToCart").click()
                                         time.sleep(1)
-                                        # driver.get('https://www.golfwang.com/cart.php')
-                                        # if checkout is True: checkout(driver)
+
                                         return cop_style
                                     else:
                                         forms.pop(x)
@@ -175,6 +174,7 @@ def size_color_selection(driver,product_page,sizes=None,color=None):
 
 def checkout(driver) :
     driver.get('https://www.golfwang.com/checkout.php')
+    time.sleep(1)
     while True:
         try:
             driver.find_element_by_id('checkout-shipping-continue').click()
@@ -183,7 +183,7 @@ def checkout(driver) :
             time.sleep(1)
 
     time.sleep(2)
-    driver.find_element_by_id('ccNumber').send_keys(config.cred_num)
+    driver.find_element_by_id('ccNumber').send_keys(config.cred_num) # WAITING FOR THIS ELEMENT IS CAUSING THE MOS
     driver.find_element_by_id('ccExpiry').send_keys(config.cred_exp)
     driver.find_element_by_id('ccName').send_keys(config.cred_name)
     driver.find_element_by_id('ccCvv').send_keys(config.cred_cvv)
@@ -204,18 +204,15 @@ def main(search=None,category=None, size=None, color=None, quantity=None):
         driver.find_element_by_id('login_email').send_keys(config.user)
         driver.find_element_by_id('login_pass').send_keys(config.password)
         driver.find_element_by_css_selector("input[value='Sign in']").click()
-        print '{}: SIGNED IN'.format(config.user)
-        time.sleep(1)
 
-
-        # print "\nGOLF COP 30000 STARTIN IN 4 SECONDS"
-        time.sleep(4)
+        print 'golf.com : SIGNED IN'.format(config.user)
+        time.sleep(5)
         print "STARTING"
         
         start = time.time()
         items_copped = []
         for x in range(len(orderList)):
-            # local_start = time.time()
+            local_start = time.time()
             quantity = orderList[x][0]
             category = orderList[x][1].lower()
             search = orderList[x][2].lower()
@@ -225,9 +222,9 @@ def main(search=None,category=None, size=None, color=None, quantity=None):
 
             product_page, product = getLink(search,category)
             selecting_options = size_color_selection(driver,product_page,size, color) if (x == len(orderList)-1) else size_color_selection(driver,product_page,size, color)
-            # local_end = time.time()
+            local_end = time.time()
 
-            # print "\nIt took {:0.3f} seconds to add to cart".format(local_end-local_start)
+            print "\nIt took {:0.3f} seconds to add to cart".format(local_end-local_start)
             if selecting_options is not None:
                 items_copped.append("ADDED TO CART: {}\nATTRIBUTES: {}\n".format(product,selecting_options))
                 if x == len(orderList)-1:
