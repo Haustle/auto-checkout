@@ -1,5 +1,4 @@
-# MAKE SURE TO PULL ALL INFORMATION INBETWEEN THE
-
+driver_loc = 'LOC_CHROMEDRIVE'
 
 user = 'EMAIL_HERE' # username for golfwang.com
 password = 'PASSWORD_HERE' # password for golfwang.com
