@@ -4,6 +4,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import Select
 from bs4 import BeautifulSoup
+from selenium.common.exceptions import NoSuchElementException
 
 
 
@@ -30,6 +31,7 @@ def genreChoose(genre):
 def getLink(search=None , category=None, color=None):
 
     url = genreChoose(category)
+    time_to_find = time.time()
     result = requests.get(url)
     page = result.text
     soup = BeautifulSoup(page,'html.parser')
@@ -64,7 +66,8 @@ def getLink(search=None , category=None, color=None):
                     # print "{}: {}".format(name,temp_counter)
                     top_rated.append([temp_url,temp_counter])
 
-                        
+    time_to_end = time.time()
+    print "It took {} to find the link to the product".format(time_to_end-time_to_find)    
     return top_rated[0],og_name
 
 def size_color_selection(driver,product_page,sizes=None,color=None):
@@ -186,7 +189,7 @@ def checkout(driver) :
         try:
             driver.find_element_by_id('ccNumber').send_keys(config.cred_num) # WAITING FOR THIS ELEMENT IS CAUSING THE MOS
             break
-        except selenium.common.exceptions.NoSuchElementException:
+        except NoSuchElementException:
             time.sleep(1)
     
     driver.find_element_by_id('ccExpiry').send_keys(config.cred_exp)
@@ -211,10 +214,9 @@ def main(search=None,category=None, size=None, color=None, quantity=None):
         driver.find_element_by_id('login_email').send_keys(config.user)
         driver.find_element_by_id('login_pass').send_keys(config.password)
         driver.find_element_by_css_selector("input[value='Sign in']").click()
-
-        print 'golf.com : SIGNED IN'.format(config.user)
         time.sleep(5)
-        print "STARTING"
+        print 'golfwang.com : SIGNED IN'.format(config.user)
+        # print "STARTING"
         
         start = time.time()
         items_copped = []
